@@ -25,18 +25,13 @@ from bleak_pythonista.backend.pythonistacb.types import (
 from bleak.exc import BleakError
 
 
-if TYPE_CHECKING:
-    from mypy_extensions import VarArg, KwArg
-    from functools import _Wrapped
-
-
 logger = logging.getLogger(__name__)
 
 DisconnectCallback = Callable[[], None]
 
 
-_CENTRAL_MANAGER_METHOD = Callable[[CBCentralManager, VarArg(Any), KwArg(Any)], None]
-_CENTRAL_MANAGER_DELEGATE_METHOD = Callable[[CBCentralManagerDelegate, VarArg(Any), KwArg(Any)], None]
+_CENTRAL_MANAGER_METHOD = Callable[[CBCentralManager, Any], None]
+_CENTRAL_MANAGER_DELEGATE_METHOD = Callable[[CBCentralManagerDelegate, Any], None]
 
 
 def should_reset_on_exc(func: _CENTRAL_MANAGER_METHOD):
@@ -77,6 +72,7 @@ def ensure_thread_safe(
 
 class CentralManager(_cb.CentralManager):
     def __init__(self, delegate: CBCentralManagerDelegate):
+        super().__init__()
         self.delegate: CBCentralManagerDelegate = delegate
         self._scanning: bool = False
 

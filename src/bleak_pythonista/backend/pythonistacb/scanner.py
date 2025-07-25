@@ -42,7 +42,7 @@ class BleakScannerPythonistaCB(BaseBleakScanner):
         service_uuids: Optional[list[CBUUID]] = None,
         scanning_mode: Literal["active", "passive"] = "active",
         *,
-        cb_: _CBScannerArgs = None,
+        cb: _CBScannerArgs = None,
         **kwargs: Any,
     ):
         super().__init__(detection_callback, service_uuids)
@@ -50,9 +50,10 @@ class BleakScannerPythonistaCB(BaseBleakScanner):
         if scanning_mode == "passive":
             raise BleakError("iOS does not support passive scanning")
 
-        _use_bdaddr = cb_.get("use_bdaddr", False)
-        if _use_bdaddr:
-            raise BleakError("iOS does not support use_bdaddr")
+        if cb:
+            _use_bdaddr = cb.get("use_bdaddr", False)
+            if _use_bdaddr:
+                raise BleakError("iOS does not support use_bdaddr")
 
         manager = CentralManagerDelegate()
         assert manager

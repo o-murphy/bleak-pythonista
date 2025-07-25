@@ -43,9 +43,9 @@ include = ["bleak_pythonista*"]
 [tool.setuptools.dynamic]
 version = { file = "VERSION" }
 
-# # uncomment to configure pytest
-#[tool.pytest]
-#testpaths = ["tests"]
+# uncomment to configure pytest
+[tool.pytest]
+testpaths = ["tests"]
 
 [tool.mypy]
 packages = ["bitchat_python"]
@@ -61,5 +61,8 @@ extend-exclude = ["__init__.py"]
 [dependency-groups]
 dev = [
     "mypy>=1.17.0",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-mock>=3.14.1",
     "ruff>=0.12.5",
 ]
