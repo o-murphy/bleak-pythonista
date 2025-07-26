@@ -2,13 +2,18 @@ import sys
 import asyncio
 from functools import wraps
 import logging
-from typing import Optional, List, Callable, Dict, Any, cast
+from typing import Optional, List, Callable, Dict, Any
 import threading
 
 if sys.version_info < (3, 11):
     from async_timeout import timeout as async_timeout
 else:
     from asyncio import timeout as async_timeout
+
+if sys.version_info < (3, 10):
+    from typing import cast
+else:
+    from typing_extensions import cast
 
 import _cb
 from bleak_pythonista.backend.pythonistacb.types import (

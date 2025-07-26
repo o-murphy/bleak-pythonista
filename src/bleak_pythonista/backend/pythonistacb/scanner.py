@@ -1,11 +1,11 @@
 import sys
 from typing import TYPE_CHECKING, Dict, List
 
-from bleak_pythonista.args.pythonistacb import CBScannerArgs as _CBScannerArgs
-
 if TYPE_CHECKING:
     if sys.platform != "ios":
         assert False, "This backend is only available on iOS"
+
+from bleak_pythonista.args.pythonistacb import CBScannerArgs as _CBScannerArgs
 
 import logging
 from typing import Any, Literal, Optional
