@@ -10,10 +10,11 @@ authors = [
 description = "bleak compatible pythonista.cb backend"
 
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 keywords = ["bleak", "python", "pythonista", "ble"]
 dependencies = [
     "bleak>=1.0.1",
+    "typing-extensions>=4.14.1",
 ]
 license = { file = "LICENSE" }
 classifiers = [
@@ -57,7 +58,7 @@ include = [
     "src/**/*.py",
     "tests",
 ]
-extend-exclude = ["__init__.py"]
+#extend-exclude = ["__init__.py"]
 
 
 [dependency-groups]

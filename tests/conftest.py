@@ -1,4 +1,3 @@
-# conftest.py
 import sys
 import pytest
 import os

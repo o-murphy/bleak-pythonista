@@ -1,3 +1,12 @@
+# Created on July, 07 2025 by o-murphy <https://github.com/o-murphy>
+"""
+pythonista `_cb` module type annotations
+according to [pythonista.cb docs](https://omz-software.com/pythonista/docs/ios/cb.html)
+and references to pythonista built-in `_cb` module help
+>>> import _cb
+>>> help(_cb)
+"""
+
 from typing import Optional, List
 
 __all__ = (

@@ -1,11 +1,13 @@
+# Created on July, 07 2025 by o-murphy <https://github.com/o-murphy>
+
 import sys
 from typing import TYPE_CHECKING, Dict, List
-
-from bleak_pythonista.args.pythonistacb import CBScannerArgs as _CBScannerArgs
 
 if TYPE_CHECKING:
     if sys.platform != "ios":
         assert False, "This backend is only available on iOS"
+
+from bleak_pythonista.args.pythonistacb import CBScannerArgs as _CBScannerArgs
 
 import logging
 from typing import Any, Literal, Optional
@@ -36,6 +38,32 @@ logger = logging.getLogger(__name__)
 
 
 class BleakScannerPythonistaCB(BaseBleakScanner):
+    """The native iOS Bleak BLE Scanner.
+
+    Documentation:
+    https://omz-software.com/pythonista/docs/ios/cb.html
+
+    pythonista `_cb` module doesn't explicitly use Bluetooth addresses to identify peripheral
+    devices because private devices may obscure their Bluetooth addresses. To cope
+    with this, pythonista `_cb` module uses UUIDs for each peripheral. Bleak uses
+    this for the BLEDevice address on macOS.
+
+    Args:
+        detection_callback:
+            Optional function that will be called each time a device is
+            discovered or advertising data has changed.
+        service_uuids:
+            Optional list of service UUIDs to filter on. Only advertisements
+            containing this advertising data will be received.
+        scanning_mode:
+            Set to ``"passive"`` to avoid the ``"active"`` scanning mode. Not
+            supported on iOS! Will raise: class:`BleakError` if set to
+            ``"passive"``
+        **timeout (float):
+             The scanning timeout to be used, in case of missing
+            ``stop_scan`` method.
+    """
+
     def __init__(
         self,
         detection_callback: Optional[AdvertisementDataCallback] = None,
@@ -51,6 +79,7 @@ class BleakScannerPythonistaCB(BaseBleakScanner):
             raise BleakError("iOS does not support passive scanning")
 
         if cb:
+            # only for compat with CoreBluetooth backend args
             _use_bdaddr = cb.get("use_bdaddr", False)
             if _use_bdaddr:
                 raise BleakError("iOS does not support use_bdaddr")
@@ -90,6 +119,9 @@ class BleakScannerPythonistaCB(BaseBleakScanner):
             advertisement_data = AdvertisementData(
                 local_name=p.name,
                 manufacturer_data=manufacturer_data,
+                # FIXME: pythonista `_cb` module does not have methods
+                #  to get service_data as Buffer
+                #  we will use CBService object instead
                 service_data=service_data,
                 service_uuids=service_uuids,
                 tx_power=tx_power,

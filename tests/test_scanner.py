@@ -1,9 +1,7 @@
 import pytest
 
-from bleak import BleakScanner, BleakError
-from bleak_pythonista.backend.pythonistacb.scanner import BleakScannerPythonistaCB
-from bleak_pythonista.backend.pythonistacb.types import CBCentralManagerState
 from _cb import *
+from bleak_pythonista import BleakScanner, BleakError, CBCentralManagerState
 
 
 @pytest.fixture(autouse=True) # Keep it autouse for global state reset
@@ -40,7 +38,7 @@ async def test_scanner_BT_READY():
     ]
     CentralManager._will_discover = test_data # This will now work correctly
 
-    devices = await BleakScanner.discover(timeout=1, backend=BleakScannerPythonistaCB)
+    devices = await BleakScanner.discover(timeout=1)
 
     assert len(devices) == len(test_data)
     devices.sort(key=lambda d: d.address)
@@ -75,7 +73,7 @@ async def test_scanner_BT_NOT_READY(state, pattern):
     # or it might expect its value. This code assumes it expects the value.
     CentralManager.state = state
     with pytest.raises(BleakError, match=pattern):
-        devices = await BleakScanner.discover(timeout=1, backend=BleakScannerPythonistaCB)
+        devices = await BleakScanner.discover(timeout=1)
 
 
 @pytest.mark.asyncio
@@ -83,7 +81,7 @@ async def test_scanner_NO_BT_DEVICES():
     # The fixture already sets the state and clears peripherals.
     # We just need to make sure the state is POWERED_ON
     CentralManager.state = CM_STATE_POWERED_ON
-    devices = await BleakScanner.discover(timeout=1, backend=BleakScannerPythonistaCB)
+    devices = await BleakScanner.discover(timeout=1)
     assert len(devices) == 0
 
 @pytest.mark.asyncio
@@ -104,7 +102,7 @@ async def test_scanner_WITH_SERVICES(hrm_peripheral):
     # temp_sensor._add_service(temp_service)
 
     CentralManager._will_discover.append(hrm_peripheral)
-    devices = await BleakScanner.discover(timeout=1, backend=BleakScannerPythonistaCB)
+    devices = await BleakScanner.discover(timeout=1)
     assert len(devices) == 1
     assert devices[0].name == "HeartRateMonitor"
     assert devices[0].address == "12345678-1234-1234-1234-123456789abc"
@@ -124,7 +122,7 @@ async def test_scanner_BY_SERVICES(hrm_peripheral):
     temp_sensor._add_service(temp_service)
 
     CentralManager._will_discover = [hrm_peripheral, temp_sensor]
-    devices = await BleakScanner.discover(service_uuids=["180D"], timeout=1, backend=BleakScannerPythonistaCB)
+    devices = await BleakScanner.discover(service_uuids=["180D"], timeout=1)
     assert len(devices) == 1
     assert devices[0].name == "HeartRateMonitor"
     assert devices[0].address == "12345678-1234-1234-1234-123456789abc"

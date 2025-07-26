@@ -1,7 +1,21 @@
+# Created on July, 07 2025 by o-murphy <https://github.com/o-murphy>
+
+import sys
 import asyncio
 from enum import IntEnum
-from typing import TypeAlias, Any, Optional, Protocol, List, Dict, Callable
-from typing_extensions import Buffer
+from typing import Any, Optional, Protocol, List, Dict, Callable
+
+
+if sys.version_info < (3, 12):
+    from typing_extensions import Buffer
+else:
+    from collections.abc import Buffer
+
+if sys.version_info < (3, 10):
+    from typing_extensions import TypeAlias
+else:
+    from collections.abc import TypeAlias
+
 import _cb
 
 
@@ -58,13 +72,13 @@ class CBDescriptor:
 
 class CBCharacteristic(Protocol):
     properties: CBCharacteristicProperty
-    value: Optional[bytes]
+    value: Optional[Buffer]
     uuid: CBUUID  # hex
 
     @property
     def notifying(self) -> bool: ...
 
-    # descriptors: List[CBDescriptor] # pythonista.cb does not support descriptors
+    # descriptors: List[CBDescriptor] # pythonista `_cb` module does not support descriptors
 
 
 class CBService(Protocol):
@@ -74,7 +88,7 @@ class CBService(Protocol):
 
 
 class CBPeripheral(Protocol):
-    manufacturer_data: bytes
+    manufacturer_data: Buffer
     name: Optional[str]
     uuid: CBUUID  # hex
     state: int
