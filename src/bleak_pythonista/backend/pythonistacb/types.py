@@ -14,7 +14,7 @@ else:
 if sys.version_info < (3, 10):
     from typing_extensions import TypeAlias
 else:
-    from collections.abc import TypeAlias
+    from typing import TypeAlias
 
 import _cb
 
