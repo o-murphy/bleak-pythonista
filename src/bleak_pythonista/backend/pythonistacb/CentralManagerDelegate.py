@@ -1,3 +1,10 @@
+# Created on July, 07 2025 by o-murphy <https://github.com/o-murphy>
+"""
+CentralManagerDelegate will implement the CBCentralManagerDelegate protocol to
+manage CoreBluetooth services and resources on the Central End
+[pythonista.cb docs](https://omz-software.com/pythonista/docs/ios/cb.html)
+"""
+
 import sys
 import asyncio
 from functools import wraps
@@ -40,6 +47,11 @@ _CENTRAL_MANAGER_DELEGATE_METHOD = Callable[[CBCentralManagerDelegate, Any], Non
 
 
 def should_reset_on_exc(func: _CENTRAL_MANAGER_METHOD):
+    """
+    Decorates CentralManager method
+    to reset it via it's delegate on exception
+    """
+
     @wraps(func)
     def wrapper(self: CBCentralManager, *args, **kwargs) -> None:
         try:
@@ -60,6 +72,11 @@ def should_reset_on_exc(func: _CENTRAL_MANAGER_METHOD):
 def ensure_thread_safe(
     func: _CENTRAL_MANAGER_DELEGATE_METHOD,
 ):
+    """
+    Decorates CentralManagerDelegate method
+    to run it thread safe in running asyncio loop
+    """
+
     @wraps(func)
     def wrapper(
         self: CBCentralManagerDelegate, *args, **kwargs
@@ -70,18 +87,31 @@ def ensure_thread_safe(
         def callback() -> None:
             func(self, *args, **kwargs)
 
+        # noinspection PyTypeChecker
         return self.event_loop.call_soon_threadsafe(callback)
 
     return wrapper
 
 
 class CentralManager(_cb.CentralManager):
+    """
+    Custom `CentralManager` wrapper is inheritance from `_cb.CentralManager`
+    to allow having few manager instances,
+
+    Described in docs `pythonista.cb.SharedCentralManager` do not allow it
+    """
+
     def __init__(self, delegate: CBCentralManagerDelegate):
         super().__init__()
         self.delegate: CBCentralManagerDelegate = delegate
         self._scanning: bool = False
 
         self._scanning_service_uuids: Optional[set[CBUUID]] = None
+
+    def __del__(self):
+        # require freeing resources on __del__
+        # you should call `del <CentralManager>` in parent scope
+        self.delegate = None
 
     @property
     def is_scanning(self) -> bool:
@@ -114,7 +144,10 @@ class CentralManager(_cb.CentralManager):
         self.did_update_scanning(False)
 
     def reset(self):
-        self.delegate = None
+        # require freeing resources on __del__
+        # _cb.CentralManager can't reinstantiate itself!
+        # You should call `del <CentralManager>` it and reinstantiate it in parent scope
+        self.__del__()
 
     @should_reset_on_exc
     def did_update_state(self) -> None:
@@ -203,6 +236,12 @@ class CentralManagerDelegate:
 
         self._did_update_state_event.wait(1)
 
+        # According to `pythonista.cb` docs, it is not valid to call CBCentral
+        # methods until the `CentralManager.did_update_state()` delegate method
+        # is called and the current state is `CBManagerStatePoweredOn`.
+        # It doesn't take long for the callback to occur, so we should be able
+        # to do a blocking wait here without anyone complaining.
+
         cm_state: CBCentralManagerState = CBCentralManagerState(
             self.central_manager.state
         )
@@ -220,11 +259,12 @@ class CentralManagerDelegate:
         self._did_stop_scanning_event: Optional[asyncio.Event] = None
 
     def __del__(self):
-        self.central_manager.reset()
+        # require freeing resources on __del__
         del self.central_manager
 
     def reset(self) -> None:
-        self.__del__()
+        # require freeing resources on __del__
+        del self.central_manager
         self.central_manager = cast(
             CBCentralManager, CentralManager(cast(CBCentralManagerDelegate, self))
         )
@@ -308,7 +348,27 @@ class CentralManagerDelegate:
 
     @ensure_thread_safe
     def did_discover_peripheral(self, p: CBPeripheral):
+        # Note: this function might be called several times for the same device.
+        # This can happen, for instance, when an active scan is done, and the
+        # second call with contain the data from the BLE scan response.
+        # Example a first time with the following keys in advertisementData:
+        # ['kCBAdvDataLocalName', 'kCBAdvDataIsConnectable', 'kCBAdvDataChannel']
+        # ... and later a second time with other keys (and values) such as:
+        # ['kCBAdvDataServiceUUIDs', 'kCBAdvDataIsConnectable', 'kCBAdvDataChannel']
+        #
+        # i.e. it is best not to trust advertisementData for later use and data
+        # from it should be copied.
+        #
+        # This behaviour can't be affected by now,
+        # but CentralManagerDelegate keeps discovered devices
+        # in CentralManagerDelegate._peripherals dict by uuid
+        # and updates it if discovered again
+
         self._peripherals[p.uuid] = p
+
+        # `cb_.did_discover_peripheral` does not handle `Peripheral.services`
+        # we can't scan for peripherals by services without
+        # peripheral connection, so connecting is required
         self.central_manager.connect_peripheral(p)
 
     @ensure_thread_safe
@@ -317,6 +377,9 @@ class CentralManagerDelegate:
         if future is not None:
             future.set_result(True)
 
+        # `cb_.did_connect_peripheral` does not handle `Peripheral.services`
+        # we can't scan for peripherals by services without
+        # peripheral connection, so connecting is required
         p.discover_services()
 
     @ensure_thread_safe

@@ -1,5 +1,10 @@
+"""
+`pythonista.cb` module type annotations
+according to [pythonista.cb docs](https://omz-software.com/pythonista/docs/ios/cb.html)
+"""
+
 from typing import Optional, Protocol
-from pythonista._cb import (
+from _cb import (
     CM_STATE_UNKNOWN,
     CM_STATE_RESETTING,
     CM_STATE_UNSUPPORTED,

@@ -1,3 +1,5 @@
+# Created on July, 07 2025 by o-murphy <https://github.com/o-murphy>
+
 import sys
 import asyncio
 from enum import IntEnum
@@ -76,7 +78,7 @@ class CBCharacteristic(Protocol):
     @property
     def notifying(self) -> bool: ...
 
-    # descriptors: List[CBDescriptor] # pythonista.cb does not support descriptors
+    # descriptors: List[CBDescriptor] # pythonista `_cb` module does not support descriptors
 
 
 class CBService(Protocol):

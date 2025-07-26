@@ -1,5 +1,9 @@
 # mypy: ignore-errors
-"""FAKE _cb MODULE"""
+# Created on July, 07 2025 by o-murphy <https://github.com/o-murphy>
+"""
+FAKE pythonista `_cb` module to simulate backend
+to simplify tests, mocking on other platforms
+"""
 
 from typing import Optional, List
 import uuid
@@ -244,10 +248,3 @@ class CentralManager:
     def did_update_state(self):
         """Called when the central manager state changes"""
         print(f"Central manager state updated: {self.state}")
-
-
-# # Helper function to create a fake setup for testing
-# def create_test_setup():
-#     """Create a basic test setup with central manager and some peripherals"""
-#     cm = CentralManager()
-#     return cm, cm._discovered_peripherals

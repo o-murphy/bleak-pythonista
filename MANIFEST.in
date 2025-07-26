@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+include py.typed
+
+recursive-include src *.pyi
+recursive-include src py.typed
