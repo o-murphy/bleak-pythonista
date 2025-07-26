@@ -2,7 +2,7 @@ import sys
 import asyncio
 from functools import wraps
 import logging
-from typing import Optional, List, Callable, Dict, Any, cast, TYPE_CHECKING
+from typing import Optional, List, Callable, Dict, Any, cast
 import threading
 
 if sys.version_info < (3, 11):
@@ -10,7 +10,7 @@ if sys.version_info < (3, 11):
 else:
     from asyncio import timeout as async_timeout
 
-from pythonista import _cb
+import _cb
 from bleak_pythonista.backend.pythonistacb.types import (
     CBUUID,
     CBPeripheral,

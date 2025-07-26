@@ -41,7 +41,7 @@ where = ["src"]
 include = ["bleak_pythonista*"]
 
 [tool.setuptools.dynamic]
-version = { file = "VERSION" }
+version = { file = "VERSION.txt" }
 
 # uncomment to configure pytest
 [tool.pytest]
@@ -54,9 +54,11 @@ packages = ["bitchat_python"]
 [tool.ruff]
 include = [
     "pyproject.toml",
-    "src/**/*.py"
+    "src/**/*.py",
+    "tests",
 ]
 extend-exclude = ["__init__.py"]
+
 
 [dependency-groups]
 dev = [

@@ -74,9 +74,7 @@ class BleakScannerPythonistaCB(BaseBleakScanner):
 
             # Process service data
             if p.services:
-                service_data = {
-                    s.uuid.lower(): s for s in p.services
-                }
+                service_data = {s.uuid.lower(): s for s in p.services}
                 service_uuids = list(service_data.keys())
 
             # Process manufacturer data

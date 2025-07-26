@@ -2,7 +2,7 @@ import asyncio
 from enum import IntEnum
 from typing import TypeAlias, Any, Optional, Protocol, List, Dict, Callable
 from typing_extensions import Buffer
-from pythonista import _cb
+import _cb
 
 
 CBUUID: TypeAlias = str
