@@ -8,6 +8,13 @@ to simplify tests, mocking on other platforms
 from typing import Optional, List
 import uuid
 import threading
+import warnings
+
+
+warnings.warn(
+    "The `_cb` module is for testing purposes only and should not be used in production.",
+    UserWarning,
+)
 
 __all__ = (
     "CM_STATE_UNKNOWN",

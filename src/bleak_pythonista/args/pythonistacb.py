@@ -24,6 +24,7 @@ class CBStartNotifyArgs(TypedDict, total=False):
     :meth:`bleak.BleakClient.start_notify` method.
     """
 
+    timeout: float
     notification_discriminator: Optional[NotificationDiscriminator]
     """
     A function that takes a single argument of a characteristic value

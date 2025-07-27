@@ -1,10 +1,6 @@
 # Created on July, 07 2025 by o-murphy <https://github.com/o-murphy>
 
 import sys
-import asyncio
-from enum import IntEnum
-from typing import Any, Optional, Protocol, List, Dict, Callable
-
 
 if sys.version_info < (3, 12):
     from typing_extensions import Buffer
@@ -16,12 +12,58 @@ if sys.version_info < (3, 10):
 else:
     from typing import TypeAlias
 
-import _cb
+import asyncio
+from enum import IntEnum
+from typing import Any, Optional, Protocol, List, Dict, Callable, Iterable
+
+try:
+    import _cb  # type: ignore[import-untyped, import-not-found]
+except ImportError:
+    import warnings
+
+    warnings.filterwarnings(
+        "once",
+        message="The `_cb` module could not be loaded.*",  # Use regex to match the message
+        category=UserWarning,
+    )
+
+    # No need for a manual flag, the filter handles it
+    warnings.warn(
+        "The `_cb` module could not be loaded. Falling back to a simulated `_cb` module, which may have limited functionality.",
+        UserWarning,
+    )
+    from bleak_pythonista.backend.pythonistacb import _fake_cb as _cb
+
+from bleak_pythonista.args.pythonistacb import NotificationDiscriminator
+
+from bleak.backends.scanner import AdvertisementData
+from bleak.backends.client import NotifyCallback
+
+__all__ = (
+    "CB_UUID",
+    "DEFAULT_RSSI",
+    "DEFAULT_ATT_MTU_SIZE",
+    "DisconnectCallback",
+    "CBPeripheralState",
+    "CBCentralManagerState",
+    "CENTRAL_MANAGER_STATE_TO_DEBUG",
+    "CBCharacteristicProperty",
+    "CBDescriptor",
+    "CBCharacteristic",
+    "CBService",
+    "CBPeripheral",
+    "CBCentralManager",
+    "CBCentralManagerDelegate",
+    "CBSharedCentralManager",
+    "CBAdvertisementData",
+)
 
 
-CBUUID: TypeAlias = str
-CBCharacteristicProp: TypeAlias = IntEnum
-DEFAULT_RSSI: int = -50
+CB_UUID: TypeAlias = str
+DEFAULT_RSSI: int = -50  # FIXME: maybe should be -127
+DEFAULT_ATT_MTU_SIZE = 23  # FIXME: maybe should 244 for bluetooth >= 5.0
+
+DisconnectCallback = Callable[[], None]
 
 
 class CBPeripheralState(IntEnum):
@@ -66,14 +108,14 @@ class CBCharacteristicProperty(IntEnum):
 
 
 class CBDescriptor:
-    uuid: CBUUID
+    uuid: CB_UUID
     value: Any
 
 
 class CBCharacteristic(Protocol):
     properties: CBCharacteristicProperty
     value: Optional[Buffer]
-    uuid: CBUUID  # hex
+    uuid: CB_UUID  # hex
 
     @property
     def notifying(self) -> bool: ...
@@ -84,13 +126,13 @@ class CBCharacteristic(Protocol):
 class CBService(Protocol):
     characteristics: List[CBCharacteristic]
     primary: bool
-    uuid: CBUUID  # hex
+    uuid: CB_UUID  # hex
 
 
 class CBPeripheral(Protocol):
     manufacturer_data: Buffer
     name: Optional[str]
-    uuid: CBUUID  # hex
+    uuid: CB_UUID  # hex
     state: int
     services: List[CBService]
 
@@ -110,14 +152,9 @@ class CBCentralManager(Protocol):
     @property
     def is_scanning(self) -> bool: ...
 
-    @property
-    def scanning_services_uuids(self) -> bool: ...
-
     def __init__(self) -> None: ...
     def scan_for_peripherals(self) -> None: ...
-    def scan_for_peripherals_with_services(
-        self, service_uuids: Optional[List[CBUUID]] = None
-    ) -> None: ...
+    def start_scan(self) -> None: ...
     def stop_scan(self) -> None: ...
     def reset(self) -> None: ...
     def connect_peripheral(self, p: CBPeripheral) -> None: ...
@@ -144,7 +181,60 @@ class CBCentralManagerDelegate(Protocol):
     callbacks: Dict[int, Callable[[CBPeripheral], None]] = {}
     central_manager: CBCentralManager
 
+    async def start_scan(
+        self, service_uuids: Optional[list[CB_UUID]] = None
+    ) -> None: ...
+    async def stop_scan(self) -> None: ...
+
+    async def connect(
+        self,
+        p: CBPeripheral,
+        disconnect_callback: DisconnectCallback,
+        timeout: float = 10.0,
+    ) -> None: ...
+    async def disconnect(self, p: CBPeripheral) -> None: ...
+
+    def services_discovered_futures(self) -> Iterable[asyncio.Future[Any]]: ...
+
+    async def discover_services(self, p: CBPeripheral) -> List[CBService]: ...
+    async def discover_characteristics(
+        self, p: CBPeripheral, c: CBCharacteristic
+    ) -> List[CBCharacteristic]: ...
+    async def read_characteristic(
+        self,
+        p: CBPeripheral,
+        c: CBCharacteristic,
+        use_cached: bool,
+        timeout: int = 20,
+    ) -> Buffer: ...
+    async def write_characteristic(
+        self,
+        p: CBPeripheral,
+        c: CBCharacteristic,
+        value: Buffer,
+        response: CBCharacteristicProperty,
+    ) -> None: ...
+
+    async def start_notifications(
+        self,
+        p: CBPeripheral,
+        c: CBCharacteristic,
+        callback: NotifyCallback,
+        notification_discriminator: Optional[NotificationDiscriminator] = None,
+        timeout: Optional[float] = 20.0,
+    ) -> None: ...
+
+    async def stop_notifications(
+        self,
+        p: CBPeripheral,
+        c: CBCharacteristic,
+        timeout: Optional[float] = 20.0,
+    ) -> None: ...
+
     def reset(self) -> None: ...
+    def did_update_scanning(self, is_scanning: bool) -> None: ...
+
+    # Protocol Functions
 
     def did_discover_peripheral(self, p: CBPeripheral) -> None: ...
     def did_connect_peripheral(self, p: CBPeripheral) -> None: ...
@@ -161,7 +251,6 @@ class CBCentralManagerDelegate(Protocol):
     def did_write_value(self, c: CBCharacteristic, error: Optional[str]) -> None: ...
     def did_update_value(self, c: CBCharacteristic, error: Optional[str]) -> None: ...
     def did_update_state(self) -> None: ...
-    def did_update_scanning(self, is_scanning: bool) -> None: ...
 
 
 class CBSharedCentralManager(CBCentralManager):
@@ -169,3 +258,11 @@ class CBSharedCentralManager(CBCentralManager):
     verbose: bool
 
     def verbose_log(self): ...
+
+
+class CBAdvertisementData(AdvertisementData):
+    # NOTE: pythonista `_cb` module does not have methods
+    # to get service_data as Buffer
+    # we will use CBService object instead
+
+    service_data: dict[str, CBService]  # type: ignore[assignment]
