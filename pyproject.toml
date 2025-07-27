@@ -24,6 +24,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -49,7 +50,7 @@ version = { file = "VERSION.txt" }
 testpaths = ["tests"]
 
 [tool.mypy]
-packages = ["bitchat_python"]
+packages = ["bleak_pythonista"]
 
  # uncomment to configure ruff linter/formatter
 [tool.ruff]

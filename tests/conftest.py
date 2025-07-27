@@ -1,7 +1,8 @@
 import sys
 import pytest
 import os
-import _cb as fake_cb
+from bleak_pythonista.backend.pythonistacb import _fake_cb as _cb
+
 
 @pytest.fixture(scope="session", autouse=True)
 def mock_all_native_modules():
@@ -16,7 +17,7 @@ def mock_all_native_modules():
     sys.path.insert(0, current_dir)
 
     fake_modules = {
-        "_cb": fake_cb,
+        "_cb": _cb,
     }
 
     original_modules = sys.modules.copy()

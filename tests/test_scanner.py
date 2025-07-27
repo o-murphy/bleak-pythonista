@@ -1,6 +1,6 @@
 import pytest
 
-from _cb import *
+from bleak_pythonista.backend.pythonistacb._fake_cb import *
 from bleak_pythonista import BleakScanner, BleakError, CBCentralManagerState
 
 
