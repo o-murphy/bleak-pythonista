@@ -394,7 +394,7 @@ class CentralManagerDelegate:
                 return await future or []
         except asyncio.TimeoutError:
             logger.debug(f"Discover services timed out after {timeout} seconds.")
-            self._services_discovered_futures[p.uuid].set_result([])
+            future.set_result([])
             return []
         finally:
             del self._services_discovered_futures[p.uuid]
@@ -411,7 +411,7 @@ class CentralManagerDelegate:
                 return await future or []
         except asyncio.TimeoutError:
             logger.debug(f"Discovery timed out after {timeout} seconds.")
-            self._characteristics_discovered_futures[s.uuid].set_result([])
+            future.set_result([])
             return []
         finally:
             del self._characteristics_discovered_futures[s.uuid]
@@ -437,7 +437,7 @@ class CentralManagerDelegate:
                 return await future
         except asyncio.TimeoutError:
             logger.debug(f"Read characteristic timed out after {timeout} seconds.")
-            self._characteristic_read_futures[c.uuid].set_result(b"")
+            future.set_result(b"")
             return b""
         finally:
             del self._characteristic_read_futures[c.uuid]
@@ -462,7 +462,7 @@ class CentralManagerDelegate:
                     await future
             except asyncio.TimeoutError:
                 logger.debug(f"Write characteristic timed out after {timeout} seconds.")
-                self._characteristic_write_futures[c.uuid].set_result(None)
+                future.set_result(None)
             finally:
                 del self._characteristic_write_futures[c.uuid]
         else:
@@ -493,7 +493,7 @@ class CentralManagerDelegate:
                 await future
         except asyncio.TimeoutError:
             logger.warning("Can't determine notification change state")
-            self._characteristic_notify_change_futures[c.uuid].set_result(None)
+            future.set_result(None)
         finally:
             del self._characteristic_notify_change_futures[c.uuid]
 
@@ -515,7 +515,7 @@ class CentralManagerDelegate:
                 await future
         except asyncio.TimeoutError:
             logger.warning("Can't determine notification change state")
-            self._characteristic_notify_change_futures[c.uuid].set_result(None)
+            future.set_result(None)
         finally:
             del self._characteristic_notify_change_futures[c.uuid]
 
