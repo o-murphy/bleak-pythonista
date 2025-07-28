@@ -243,17 +243,19 @@ class CentralManagerDelegate:
         ] = {}
 
         self._characteristics_discovered_futures: dict[
-            int, asyncio.Future[list[CBCharacteristic]]
+            CB_UUID, asyncio.Future[list[CBCharacteristic]]
         ] = {}
 
-        self._characteristic_read_futures: Dict[int, asyncio.Future[Buffer]] = {}
-        self._characteristic_write_futures: Dict[int, asyncio.Future[None]] = {}
+        self._characteristic_read_futures: Dict[CB_UUID, asyncio.Future[Buffer]] = {}
+        self._characteristic_write_futures: Dict[CB_UUID, asyncio.Future[None]] = {}
 
-        self._characteristic_notify_change_futures: Dict[int, asyncio.Future[None]] = {}
-        self._characteristic_notify_callbacks: Dict[int, NotifyCallback] = {}
+        self._characteristic_notify_change_futures: Dict[
+            CB_UUID, asyncio.Future[None]
+        ] = {}
+        self._characteristic_notify_callbacks: Dict[CB_UUID, NotifyCallback] = {}
 
         self._characteristic_notification_discriminators: Dict[
-            int, Optional[NotificationDiscriminator]
+            CB_UUID, Optional[NotificationDiscriminator]
         ] = {}
 
         self.central_manager: CBCentralManager = cast(
@@ -380,27 +382,39 @@ class CentralManagerDelegate:
             self._characteristic_notify_change_futures.values(),
         )
 
-    async def discover_services(self, p: CBPeripheral) -> List[CBService]:
+    async def discover_services(
+        self, p: CBPeripheral, timeout: float = 20.0
+    ) -> List[CBService]:
         future = self.event_loop.create_future()
         self._services_discovered_futures[p.uuid] = future
 
         try:
             p.discover_services()
-            return await future or []
+            async with async_timeout(timeout):
+                return await future or []
+        except asyncio.TimeoutError:
+            logger.debug(f"Discover services timed out after {timeout} seconds.")
+            self._services_discovered_futures[p.uuid].set_result([])
+            return []
         finally:
             del self._services_discovered_futures[p.uuid]
 
     async def discover_characteristics(
-        self, p: CBPeripheral, s: CBService
+        self, p: CBPeripheral, s: CBService, timeout: float = 20.0
     ) -> List[CBCharacteristic]:
         future = self.event_loop.create_future()
-        self._characteristics_discovered_futures[id(s)] = future
+        self._characteristics_discovered_futures[s.uuid] = future
 
         try:
             p.discover_characteristics(s)
-            return await future or []
+            async with async_timeout(timeout):
+                return await future or []
+        except asyncio.TimeoutError:
+            logger.debug(f"Discovery timed out after {timeout} seconds.")
+            self._characteristics_discovered_futures[s.uuid].set_result([])
+            return []
         finally:
-            del self._characteristics_discovered_futures[id(s)]
+            del self._characteristics_discovered_futures[s.uuid]
 
     async def read_characteristic(
         self,
@@ -415,14 +429,18 @@ class CentralManagerDelegate:
 
         future = self.event_loop.create_future()
 
-        self._characteristic_read_futures[id(c)] = future
+        self._characteristic_read_futures[c.uuid] = future
 
         try:
             p.read_characteristic_value(c)
             async with async_timeout(timeout):
                 return await future
+        except asyncio.TimeoutError:
+            logger.debug(f"Read characteristic timed out after {timeout} seconds.")
+            self._characteristic_read_futures[c.uuid].set_result(b"")
+            return b""
         finally:
-            del self._characteristic_read_futures[id(c)]
+            del self._characteristic_read_futures[c.uuid]
 
     async def write_characteristic(
         self,
@@ -430,18 +448,23 @@ class CentralManagerDelegate:
         c: CBCharacteristic,
         value: Buffer,
         response: CBCharacteristicProperty,
+        timeout: int = 20,
     ) -> None:
         # in CoreBluetooth there is no sign of success or failure of
         # CBCharacteristicWriteWithoutResponse
         with_response = bool(response & CBCharacteristicProperty.WRITE)
         if with_response:  # CBCharacteristicWriteWithResponse:
             future = self.event_loop.create_future()
-            self._characteristic_write_futures[id(c)] = future
+            self._characteristic_write_futures[c.uuid] = future
             try:
                 p.write_characteristic_value(c, value, with_response)
-                await future
+                async with async_timeout(timeout):
+                    await future
+            except asyncio.TimeoutError:
+                logger.debug(f"Write characteristic timed out after {timeout} seconds.")
+                self._characteristic_write_futures[c.uuid].set_result(None)
             finally:
-                del self._characteristic_write_futures[id(c)]
+                del self._characteristic_write_futures[c.uuid]
         else:
             p.write_characteristic_value(c, value, with_response)
 
@@ -453,27 +476,26 @@ class CentralManagerDelegate:
         notification_discriminator: Optional[NotificationDiscriminator] = None,
         timeout: Optional[float] = 20,
     ) -> None:
-        c_handle = id(c)
-        if c_handle in self._characteristic_notify_callbacks:
+        if c.uuid in self._characteristic_notify_callbacks:
             raise ValueError("Characteristic notifications already started")
 
-        self._characteristic_notify_callbacks[c_handle] = callback
-        self._characteristic_notification_discriminators[c_handle] = (
+        self._characteristic_notify_callbacks[c.uuid] = callback
+        self._characteristic_notification_discriminators[c.uuid] = (
             notification_discriminator
         )
 
         future = self.event_loop.create_future()
 
-        self._characteristic_notify_change_futures[c_handle] = future
+        self._characteristic_notify_change_futures[c.uuid] = future
         try:
             p.set_notify_value(c, True)
             async with async_timeout(timeout):
                 await future
         except asyncio.TimeoutError:
             logger.warning("Can't determine notification change state")
-            self._characteristic_notify_change_futures[c_handle].set_result(None)
+            self._characteristic_notify_change_futures[c.uuid].set_result(None)
         finally:
-            del self._characteristic_notify_change_futures[c_handle]
+            del self._characteristic_notify_change_futures[c.uuid]
 
     async def stop_notifications(
         self,
@@ -481,25 +503,24 @@ class CentralManagerDelegate:
         c: CBCharacteristic,
         timeout: Optional[float] = 20,
     ) -> None:
-        c_handle = id(c)
-        if c_handle not in self._characteristic_notify_callbacks:
+        if c.uuid not in self._characteristic_notify_callbacks:
             raise ValueError("Characteristic notification never started")
 
         future = self.event_loop.create_future()
 
-        self._characteristic_notify_change_futures[c_handle] = future
+        self._characteristic_notify_change_futures[c.uuid] = future
         try:
             p.set_notify_value(c, False)
             async with async_timeout(timeout):
                 await future
         except asyncio.TimeoutError:
             logger.warning("Can't determine notification change state")
-            self._characteristic_notify_change_futures[c_handle].set_result(None)
+            self._characteristic_notify_change_futures[c.uuid].set_result(None)
         finally:
-            del self._characteristic_notify_change_futures[c_handle]
+            del self._characteristic_notify_change_futures[c.uuid]
 
-        self._characteristic_notify_callbacks.pop(c_handle)
-        self._characteristic_notification_discriminators.pop(c_handle)
+        self._characteristic_notify_callbacks.pop(c.uuid)
+        self._characteristic_notification_discriminators.pop(c.uuid)
 
     def did_update_scanning(self, is_scanning: bool) -> None:
         if is_scanning:
@@ -601,22 +622,22 @@ class CentralManagerDelegate:
 
     @ensure_thread_safe
     def did_discover_characteristics(self, s: CBService, error: Optional[str]) -> None:
-        future = self._characteristics_discovered_futures.get(id(s), None)
+        future = self._characteristics_discovered_futures.get(s.uuid, None)
         if not future:
             logger.debug(
-                f"Unexpected event did_discover_characteristics for service {id(s)}: ({s.uuid})"
+                f"Unexpected event did_discover_characteristics for service {s.uuid}: ({id(s)})"
             )
             return
 
         if future is not None:
             if error is not None:
                 exception = BleakError(
-                    f"Failed to discover characteristics for service {id(s)} ({s.uuid}): {error}"
+                    f"Failed to discover characteristics for service {s.uuid} ({id(s)}): {error}"
                 )
                 future.set_exception(exception)
             else:
                 logger.debug(
-                    f"Characteristics discovered for service {id(s)} ({s.uuid})"
+                    f"Characteristics discovered for service {s.uuid} ({id(s)}"
                 )
                 future.set_result(s.characteristics)
 
@@ -628,9 +649,7 @@ class CentralManagerDelegate:
     ) -> None:
         value = c.value
 
-        c_handle = id(c)
-
-        future = self._characteristic_read_futures.get(c_handle)
+        future = self._characteristic_read_futures.get(c.uuid)
 
         # If error is set, then we know this was a read response.
         # Otherwise, if there is a pending read request, we can't tell if this is a read response or notification.
@@ -641,12 +660,12 @@ class CentralManagerDelegate:
             assert value is not None
 
             notification_discriminator = (
-                self._characteristic_notification_discriminators.get(c_handle)
+                self._characteristic_notification_discriminators.get(c.uuid)
             )
             if not future or (
                 notification_discriminator and notification_discriminator(bytes(value))
             ):
-                notify_callback = self._characteristic_notify_callbacks.get(c_handle)
+                notify_callback = self._characteristic_notify_callbacks.get(c.uuid)
 
                 if notify_callback:
                     notify_callback(bytearray(value))
@@ -655,14 +674,14 @@ class CentralManagerDelegate:
         if not future:
             logger.warning(
                 "Unexpected event didUpdateValueForCharacteristic for 0x%04x with value: %r and error: %r",
-                c_handle,
+                c.uuid,
                 value,
                 error,
             )
             return
 
         if error is not None:
-            exception = BleakError(f"Failed to read characteristic {c_handle}: {error}")
+            exception = BleakError(f"Failed to read characteristic {c.uuid}: {error}")
             future.set_exception(exception)
         else:
             logger.debug("Read characteristic value")
@@ -675,11 +694,11 @@ class CentralManagerDelegate:
         c: CBCharacteristic,
         error: Optional[str],
     ) -> None:
-        future = self._characteristic_write_futures.get(id(c), None)
+        future = self._characteristic_write_futures.get(c.uuid, None)
         if not future:
             return  # event only expected on writing with response
         if error is not None:
-            exception = BleakError(f"Failed to write characteristic {id(c)}: {error}")
+            exception = BleakError(f"Failed to write characteristic {c.uuid}: {error}")
             future.set_exception(exception)
         else:
             logger.debug("Write Characteristic Value")
@@ -691,8 +710,7 @@ class CentralManagerDelegate:
         c: CBCharacteristic,
         error: Optional[str],
     ) -> None:
-        # c_handle = id(c)
-        # future = self._characteristic_notify_change_futures.get(c_handle)
+        # future = self._characteristic_notify_change_futures.get(c.uuid)
         # if not future:
         #     logger.warning(
         #         "Unexpected event didUpdateNotificationStateForCharacteristic"
@@ -700,7 +718,7 @@ class CentralManagerDelegate:
         #     return
         # if error is not None:
         #     exception = BleakError(
-        #         f"Failed to update the notification status for characteristic {c_handle}: {error}"
+        #         f"Failed to update the notification status for characteristic {c.uuid}: {error}"
         #     )
         #     future.set_exception(exception)
         # else:
