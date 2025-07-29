@@ -290,7 +290,7 @@ class BleakClientPythonistaCB(BaseBleakClient):
         characteristic: BleakGATTCharacteristic,
         callback: NotifyCallback,
         *,
-        cb: CBStartNotifyArgs,  # FIXME: not matching BleakClient.start_notify signature
+        cb: CBStartNotifyArgs,  # NOTE: not matching BleakClient.start_notify signature
         **kwargs: Any,
     ) -> None:
         """

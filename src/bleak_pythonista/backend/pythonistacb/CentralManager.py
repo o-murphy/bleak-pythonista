@@ -378,50 +378,6 @@ class CentralManagerDelegate:
             self._characteristic_write_futures.values(),
         )
 
-    @ensure_thread_safe
-    def shutdown_services_futures(self, exception: BleakError) -> None:
-        """Clears all futures and callbacks related to a disconnected or failed-to-connect peripheral."""
-        # Cancel and remove futures for the specific peripheral
-
-        for future in self.services_discovered_futures():
-            try:
-                future.set_exception(BleakError("disconnected"))
-            except asyncio.InvalidStateError:
-                # the future was already done
-                pass
-
-        # Clear the internal dictionaries related to characteristics and services
-        # These are cleared regardless of the peripheral because the method is designed to be global now
-        self._services_discovered_futures.clear()
-        self._characteristics_discovered_futures.clear()
-        self._characteristic_read_futures.clear()
-        self._characteristic_write_futures.clear()
-        self._characteristic_notify_callbacks.clear()
-        self._characteristic_notification_discriminators.clear()
-
-        logger.debug("Shutdown services futures globally")
-
-    # @ensure_thread_safe
-    # def shutdown_connection_futures(self, exception: BleakError) -> None:
-    #     for future in itertools.chain(
-    #         self._connect_futures.values(), self._disconnect_futures.values()
-    #     ):
-    #         try:
-    #             future.set_exception(exception)
-    #         except asyncio.InvalidStateError:
-    #             pass
-    #
-    #     self._connect_futures.clear()
-    #     self._disconnect_futures.clear()
-
-    @ensure_thread_safe
-    def shutdown(self, exception: BleakError = BleakError("shutdown")) -> None:
-        """Performs a complete shutdown of all managed futures and callbacks."""
-        # self.shutdown_connection_futures(exception)
-        self.shutdown_services_futures(exception)
-        self._peripherals.clear()
-        logger.debug("Full shutdown completed")
-
     async def discover_services(
         self, p: CBPeripheral, timeout: float = 10.0
     ) -> List[CBService]:
@@ -429,6 +385,7 @@ class CentralManagerDelegate:
         self._services_discovered_futures[p.uuid] = future
 
         try:
+            p.discover_services()
             p.discover_services()
             async with async_timeout(timeout):
                 return await future or []
@@ -754,6 +711,51 @@ class CentralManagerDelegate:
         else:
             logger.debug("Write Characteristic Value")
             future.set_result(None)
+
+    # # NOTE: The code bellow is undone, it should be implemented soon for safe resources freeing
+    # @ensure_thread_safe
+    # def shutdown_services_futures(self, exception: BleakError) -> None:
+    #     """Clears all futures and callbacks related to a disconnected or failed-to-connect peripheral."""
+    #     # Cancel and remove futures for the specific peripheral
+    #
+    #     for future in self.services_discovered_futures():
+    #         try:
+    #             future.set_exception(BleakError("disconnected"))
+    #         except asyncio.InvalidStateError:
+    #             # the future was already done
+    #             pass
+    #
+    #     # Clear the internal dictionaries related to characteristics and services
+    #     # These are cleared regardless of the peripheral because the method is designed to be global now
+    #     self._services_discovered_futures.clear()
+    #     self._characteristics_discovered_futures.clear()
+    #     self._characteristic_read_futures.clear()
+    #     self._characteristic_write_futures.clear()
+    #     self._characteristic_notify_callbacks.clear()
+    #     self._characteristic_notification_discriminators.clear()
+    #
+    #     logger.debug("Shutdown services futures globally")
+
+    # @ensure_thread_safe
+    # def shutdown_connection_futures(self, exception: BleakError) -> None:
+    #     for future in itertools.chain(
+    #         self._connect_futures.values(), self._disconnect_futures.values()
+    #     ):
+    #         try:
+    #             future.set_exception(exception)
+    #         except asyncio.InvalidStateError:
+    #             pass
+    #
+    #     self._connect_futures.clear()
+    #     self._disconnect_futures.clear()
+
+    # @ensure_thread_safe
+    # def shutdown(self, exception: BleakError = BleakError("shutdown")) -> None:
+    #     """Performs a complete shutdown of all managed futures and callbacks."""
+    #     # self.shutdown_connection_futures(exception)
+    #     self.shutdown_services_futures(exception)
+    #     self._peripherals.clear()
+    #     logger.debug("Full shutdown completed")
 
 
 if __name__ == "__main__":
