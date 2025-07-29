@@ -41,7 +41,7 @@ https://stand-with-ukraine.pp.ua
 It uses Pythonista built-in `_cb` module, that is wrapper to iOS `CoreBluetooth`.**
 
 > [!CAUTION]
-> This project is in early `beta` use with caution
+> This project is in `beta`, use it with caution
 
 * This backend refers to [Pythonista.cb docs](https://omz-software.com/pythonista/docs/ios/cb.html)
 * This backend refers to existing [`macOS CoreBluetooth bleak backend`](https://github.com/hbldh/bleak/tree/develop/bleak/backends/corebluetooth) was used as a reference
