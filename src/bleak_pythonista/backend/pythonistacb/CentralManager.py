@@ -12,7 +12,7 @@ from functools import wraps
 import logging
 from typing import Optional, List, Callable, Dict, Any, Iterable
 import threading
-import atexit
+
 
 if sys.version_info < (3, 12):
     from typing_extensions import Buffer
@@ -134,6 +134,7 @@ class CentralManager(_cb.CentralManager):
         # require freeing resources on __del__
         # you should call `del <CentralManager>` in parent scope
         self.delegate = None
+        # del self.delegate
 
     @property
     def is_scanning(self) -> bool:
@@ -158,7 +159,8 @@ class CentralManager(_cb.CentralManager):
         # require freeing resources on __del__
         # _cb.CentralManager can't reinstantiate itself!
         # You should call `del <CentralManager>` it and reinstantiate it in parent scope
-        self.delegate = None
+        # self.delegate = None
+        self.__del__()
 
     @should_reset_on_exc
     def did_update_state(self) -> None:
@@ -376,6 +378,50 @@ class CentralManagerDelegate:
             self._characteristic_write_futures.values(),
         )
 
+    @ensure_thread_safe
+    def shutdown_services_futures(self, exception: BleakError) -> None:
+        """Clears all futures and callbacks related to a disconnected or failed-to-connect peripheral."""
+        # Cancel and remove futures for the specific peripheral
+
+        for future in self.services_discovered_futures():
+            try:
+                future.set_exception(BleakError("disconnected"))
+            except asyncio.InvalidStateError:
+                # the future was already done
+                pass
+
+        # Clear the internal dictionaries related to characteristics and services
+        # These are cleared regardless of the peripheral because the method is designed to be global now
+        self._services_discovered_futures.clear()
+        self._characteristics_discovered_futures.clear()
+        self._characteristic_read_futures.clear()
+        self._characteristic_write_futures.clear()
+        self._characteristic_notify_callbacks.clear()
+        self._characteristic_notification_discriminators.clear()
+
+        logger.debug("Shutdown services futures globally")
+
+    # @ensure_thread_safe
+    # def shutdown_connection_futures(self, exception: BleakError) -> None:
+    #     for future in itertools.chain(
+    #         self._connect_futures.values(), self._disconnect_futures.values()
+    #     ):
+    #         try:
+    #             future.set_exception(exception)
+    #         except asyncio.InvalidStateError:
+    #             pass
+    #
+    #     self._connect_futures.clear()
+    #     self._disconnect_futures.clear()
+
+    @ensure_thread_safe
+    def shutdown(self, exception: BleakError = BleakError("shutdown")) -> None:
+        """Performs a complete shutdown of all managed futures and callbacks."""
+        # self.shutdown_connection_futures(exception)
+        self.shutdown_services_futures(exception)
+        self._peripherals.clear()
+        logger.debug("Full shutdown completed")
+
     async def discover_services(
         self, p: CBPeripheral, timeout: float = 10.0
     ) -> List[CBService]:
@@ -545,7 +591,7 @@ class CentralManagerDelegate:
         self._did_update_state_event.set()
 
     @ensure_thread_safe
-    def did_discover_peripheral(self, p: CBPeripheral):
+    def did_discover_peripheral(self, p: CBPeripheral) -> None:
         # Note: this function might be called several times for the same device.
         # This can happen, for instance, when an active scan is done, and the
         # second call with contain the data from the BLE scan response.
@@ -573,7 +619,7 @@ class CentralManagerDelegate:
             callback(p)
 
     @ensure_thread_safe
-    def did_connect_peripheral(self, p: CBPeripheral):
+    def did_connect_peripheral(self, p: CBPeripheral) -> None:
         future = self._connect_futures.get(p.uuid, None)
         if future is not None:
             future.set_result(True)
@@ -586,7 +632,7 @@ class CentralManagerDelegate:
     @ensure_thread_safe
     def did_fail_to_connect_peripheral(
         self, p: CBPeripheral, error: Optional[str] = None
-    ):
+    ) -> None:
         future = self._connect_futures.get(p.uuid, None)
         if future is not None:
             if error is not None:
@@ -596,7 +642,9 @@ class CentralManagerDelegate:
                 future.set_result(False)
 
     @ensure_thread_safe
-    def did_disconnect_peripheral(self, p: CBPeripheral, error: Optional[str] = None):
+    def did_disconnect_peripheral(
+        self, p: CBPeripheral, error: Optional[str] = None
+    ) -> None:
         logger.debug("Peripheral Device disconnected!")
         future = self._disconnect_futures.get(p.uuid, None)
         if future is not None:
@@ -607,10 +655,10 @@ class CentralManagerDelegate:
                 future.set_result(None)
 
         callback = self._disconnect_callbacks.pop(p.uuid, None)
-        self._peripherals.pop(p.uuid, None)
 
         if callback is not None:
             callback()
+        self._peripherals.pop(p.uuid, None)
 
     @ensure_thread_safe
     def did_discover_services(

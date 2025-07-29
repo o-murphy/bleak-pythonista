@@ -94,6 +94,7 @@ class BleakClientPythonistaCB(BaseBleakClient):
             # If there are any pending futures waiting for delegate callbacks, we
             # need to raise an exception since the callback will no longer be
             # called because the device is disconnected.
+
             for future in self._delegate.services_discovered_futures():
                 try:
                     future.set_exception(BleakError("disconnected"))
@@ -202,7 +203,7 @@ class BleakClientPythonistaCB(BaseBleakClient):
 
         if matching_cb_services:
             for service in matching_cb_services:
-                serv = BleakGATTService(service, id(service.uuid), service.uuid)
+                serv = BleakGATTService(service, id(service), service.uuid)
                 services.add_service(serv)
 
                 logger.debug(
@@ -214,15 +215,9 @@ class BleakClientPythonistaCB(BaseBleakClient):
                 )
 
                 for characteristic in characteristics:
-                    logger.debug(
-                        "Retrieving descriptors for characteristic {}".format(
-                            characteristic.uuid
-                        )
-                    )
-
                     char = BleakGATTCharacteristic(
                         characteristic,
-                        id(characteristic.uuid),
+                        id(characteristic),
                         characteristic.uuid,
                         list(gatt_char_props_to_strs(characteristic.properties)),
                         lambda: self.mtu_size,
@@ -301,13 +296,14 @@ class BleakClientPythonistaCB(BaseBleakClient):
         """
         Activate notifications/indications on a characteristic.
         """
-        assert self._delegate
+        assert self._delegate is not None
+
         await self._delegate.start_notifications(
             self._peripheral,
             characteristic.obj,
             callback,
             cb.get("notification_discriminator"),
-            cb.get("timeout", 2.0),
+            cb.get("timeout", 20),
         )
 
     @override
