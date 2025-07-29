@@ -202,7 +202,7 @@ class BleakClientPythonistaCB(BaseBleakClient):
 
         if matching_cb_services:
             for service in matching_cb_services:
-                serv = BleakGATTService(service, id(service), service.uuid)
+                serv = BleakGATTService(service, id(service.uuid), service.uuid)
                 services.add_service(serv)
 
                 logger.debug(
@@ -222,7 +222,7 @@ class BleakClientPythonistaCB(BaseBleakClient):
 
                     char = BleakGATTCharacteristic(
                         characteristic,
-                        id(characteristic),
+                        id(characteristic.uuid),
                         characteristic.uuid,
                         list(gatt_char_props_to_strs(characteristic.properties)),
                         lambda: self.mtu_size,
@@ -301,14 +301,13 @@ class BleakClientPythonistaCB(BaseBleakClient):
         """
         Activate notifications/indications on a characteristic.
         """
-        assert self._delegate is not None
-
+        assert self._delegate
         await self._delegate.start_notifications(
             self._peripheral,
             characteristic.obj,
             callback,
             cb.get("notification_discriminator"),
-            cb.get("timeout", 20),
+            cb.get("timeout", 2.0),
         )
 
     @override

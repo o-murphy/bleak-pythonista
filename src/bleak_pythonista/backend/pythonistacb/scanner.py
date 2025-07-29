@@ -159,10 +159,7 @@ class BleakScannerPythonistaCB(BaseBleakScanner):
             key=p.uuid,
             address=p.uuid,  # On iOS, we use UUID as an address
             name=p.name,
-            details=(
-                p,
-                self._manager.central_manager.delegate,
-            ),  # add delegate to details
+            details=(p, self._manager),
             adv=advertisement_data,
         )
 
@@ -185,11 +182,11 @@ class BleakScannerPythonistaCB(BaseBleakScanner):
             await self._manager.disconnect(p)
 
         except Exception as e:
-            logger.error(f"Error during service filtering: {e}")
+            logger.debug(f"Error during service filtering: {e}")
             try:
                 await self._manager.disconnect(p)
             except Exception as e:
-                logger.error(f"Error during disconnecting: {e}")
+                logger.debug(f"Error during disconnecting: {e}")
 
 
 if __name__ == "__main__":

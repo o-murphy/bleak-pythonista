@@ -205,7 +205,7 @@ class CBCentralManagerDelegate(Protocol):
         p: CBPeripheral,
         c: CBCharacteristic,
         use_cached: bool,
-        timeout: int = 20,
+        timeout: float = 10.0,
     ) -> Buffer: ...
     async def write_characteristic(
         self,
@@ -221,14 +221,14 @@ class CBCentralManagerDelegate(Protocol):
         c: CBCharacteristic,
         callback: NotifyCallback,
         notification_discriminator: Optional[NotificationDiscriminator] = None,
-        timeout: Optional[float] = 20.0,
+        timeout: float = 10.0,
     ) -> None: ...
 
     async def stop_notifications(
         self,
         p: CBPeripheral,
         c: CBCharacteristic,
-        timeout: Optional[float] = 20.0,
+        timeout: float = 10.0,
     ) -> None: ...
 
     def reset(self) -> None: ...
