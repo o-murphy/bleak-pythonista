@@ -447,33 +447,36 @@ class CentralManagerDelegate:
         response: CBCharacteristicProperty,
         timeout: float = 10.0,
     ) -> None:
-        # in CoreBluetooth there is no sign of success or failure of
-        # CBCharacteristicWriteWithoutResponse
+        # In CoreBluetooth, there's no sign of success or failure for CBCharacteristicWriteWithoutResponse.
+        # Determine if a response is expected based on the characteristic property.
         with_response = bool(response & CBCharacteristicProperty.WRITE)
-        if with_response:  # CBCharacteristicWriteWithResponse:
+
+        try:
+            p.write_characteristic_value(c, value, with_response)
+        except SystemError as err:
+            # Assuming SystemError here means a Pythonista version issue (e.g., <3.5).
+            raise SystemError(
+                "Failed to write characteristic value: "
+                "Writing characteristic values requires `Pythonista` version 3.5 or newer."
+            ) from err
+
+        if with_response:
             future = self.event_loop.create_future()
             self._characteristic_write_futures[c.uuid] = future
             try:
-                try:
-                    p.write_characteristic_value(c, value, with_response)
-                except SystemError as err:
-                    logger.error(
-                        f"SystemError: _cb.Peripheral.write_characteristic_value: {err}"
-                    )
-                async with async_timeout(timeout):
+                # Use async_timeout from its package if you have it.
+                # From async_timeout import timeout as async_timeout
+                async with async_timeout(
+                    timeout
+                ):  # Using built-in asyncio.timeout in Python 3.11+
                     await future
             except asyncio.TimeoutError:
                 logger.debug(f"Write characteristic timed out after {timeout} seconds.")
-                future.set_result(None)
+                future.set_result(
+                    None
+                )  # Indicate that the future completed (with a timeout)
             finally:
                 del self._characteristic_write_futures[c.uuid]
-        else:
-            try:
-                p.write_characteristic_value(c, value, with_response)
-            except SystemError as err:
-                logger.error(
-                    f"SystemError: _cb.Peripheral.write_characteristic_value: {err}"
-                )
 
     async def start_notifications(
         self,
