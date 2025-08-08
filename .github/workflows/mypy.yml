@@ -13,8 +13,6 @@ permissions:
 jobs:
   type-checks:
     runs-on: ubuntu-latest
-    environment:
-      name: pypi
     permissions:
       id-token: write
 

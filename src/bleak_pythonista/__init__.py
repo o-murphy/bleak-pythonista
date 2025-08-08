@@ -1,13 +1,14 @@
 # ruff: noqa: F403, F405
+# type: ignore
 # mypy: disable-error-code="name-defined"
-from .backend import *
-from .args import *
+from typing import Tuple, Dict
 
 from bleak import *
-from bleak import BleakScanner as _BleakScanner
 from bleak import BleakClient as _BleakClient
+from bleak import BleakScanner as _BleakScanner
 
-from typing import Tuple, Dict, Optional
+from .args import *
+from .backend import *
 
 if sys.version_info < (3, 12):
     from typing_extensions import override
@@ -50,7 +51,7 @@ class BleakScanner(_BleakScanner):  # type: ignore[no-redef]
         timeout: float = 5.0,
         *,
         return_adv: bool = False,
-        **kwargs: Unpack[_BleakScanner.ExtraArgs],
+        **kwargs: Unpack[_BleakScanner.ExtraArgs],  # type: ignore[misc]
     ) -> Union[list[BLEDevice], Dict[str, Tuple[BLEDevice, AdvertisementData]]]:
         kwargs.setdefault("backend", BleakScannerPythonistaCB)
         return await super().discover(timeout, return_adv=return_adv, **kwargs)  # type: ignore[call-overload]
@@ -61,7 +62,7 @@ class BleakScanner(_BleakScanner):  # type: ignore[no-redef]
         cls,
         device_identifier: str,
         timeout: float = 10.0,
-        **kwargs: Unpack[_BleakScanner.ExtraArgs],
+        **kwargs: Unpack[_BleakScanner.ExtraArgs],  # type: ignore[misc]
     ) -> Optional[BLEDevice]:
         kwargs.setdefault("backend", BleakScannerPythonistaCB)
         return await super().find_device_by_address(
@@ -71,7 +72,10 @@ class BleakScanner(_BleakScanner):  # type: ignore[no-redef]
     @override
     @classmethod
     async def find_device_by_name(
-        cls, name: str, timeout: float = 10.0, **kwargs: Unpack[_BleakScanner.ExtraArgs]
+        cls,
+        name: str,
+        timeout: float = 10.0,
+        **kwargs: Unpack[_BleakScanner.ExtraArgs],  # type: ignore[misc]
     ) -> Optional[BLEDevice]:
         kwargs.setdefault("backend", BleakScannerPythonistaCB)
         return await super().find_device_by_name(name, timeout, **kwargs)
@@ -82,7 +86,7 @@ class BleakScanner(_BleakScanner):  # type: ignore[no-redef]
         cls,
         filterfunc: AdvertisementDataFilter,
         timeout: float = 10.0,
-        **kwargs: Unpack[_BleakScanner.ExtraArgs],
+        **kwargs: Unpack[_BleakScanner.ExtraArgs],  # type: ignore[misc]
     ) -> Optional[BLEDevice]:
         kwargs.setdefault("backend", BleakScannerPythonistaCB)
         return await super().find_device_by_filter(filterfunc, timeout, **kwargs)

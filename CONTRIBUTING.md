@@ -62,6 +62,7 @@ maintain high code quality.
 
 1. **Install the `pre-commit` hooks**:
    ```shell
+   uv tool install pre-commit
    pre-commit install
    ```
 
