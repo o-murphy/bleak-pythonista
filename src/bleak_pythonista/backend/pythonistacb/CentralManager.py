@@ -45,7 +45,7 @@ except ImportError:
         "The `_cb` module could not be loaded. Falling back to a simulated `_cb` module, which may have limited functionality.",
         UserWarning,
     )
-    from bleak_pythonista.backend.pythonistacb import _fake_cb as _cb
+    from bleak_pythonista.backend.pythonistacb import _fake_cb as _cb  # type: ignore[no-redef]
 
 from bleak_pythonista.backend.pythonistacb.types import (
     CB_UUID,

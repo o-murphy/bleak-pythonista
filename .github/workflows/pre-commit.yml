@@ -1,4 +1,4 @@
-name: Ruff
+name: Pre-commit
 
 
 on:
@@ -25,5 +25,10 @@ jobs:
       - name: Install the project
         run: uv sync --locked --all-extras --dev
 
-      - name: Mypy
-        run: uv run ruff check
+      - name: Setup pre-commit hooks
+        run: |
+          uv tool install pre-commit
+          pre-commit install
+
+      - name: Pre-commit
+        run: pre-commit run --all-files
