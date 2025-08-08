@@ -1,12 +1,13 @@
 # ruff: noqa: F403, F405
-from typing import Tuple, Dict
-
+# mypy: disable-error-code="name-defined"
 from .backend import *
 from .args import *
 
 from bleak import *
 from bleak import BleakScanner as _BleakScanner
 from bleak import BleakClient as _BleakClient
+
+from typing import Tuple, Dict, Optional
 
 if sys.version_info < (3, 12):
     from typing_extensions import override
