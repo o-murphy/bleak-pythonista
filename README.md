@@ -37,7 +37,7 @@ https://img.shields.io/badge/made_in-Ukraine-ffd700.svg?labelColor=0057b7&style=
 [SWUBadge]:
 https://stand-with-ukraine.pp.ua
 
-**This module uses `bleak` backend API to implement a compatible solution for `Pythonista` iOS app. 
+**This module uses `bleak` backend API to implement a compatible solution for `Pythonista` iOS app.
 It uses Pythonista built-in `_cb` module, that is wrapper to iOS `CoreBluetooth`.**
 
 > [!CAUTION]
@@ -52,6 +52,7 @@ It uses Pythonista built-in `_cb` module, that is wrapper to iOS `CoreBluetooth`
 * [Installation](#installation)
 * [Usage](#usage)
 * [What's done?](#whats-done)
+* [Contributing](CONTRIBUTING.md)
 
 
 ## Installation
@@ -70,11 +71,11 @@ async def main():
         service_uuids=["<some-service-uuid>"]  # optional
     )
     for d in devices:
-        print(d)        
+        print(d)
         client = BleakClient(d)
         await client.connect()
         print(client.services)
-    
+
 asyncio.run(main())
 ```
 
@@ -90,11 +91,11 @@ async def main():
         backend=BleakScannerPythonistaCB,
     )
     for d in devices:
-        print(d)        
+        print(d)
         client = BleakClient(d, backend=BleakClientPythonistaCB)
         await client.connect()
         print(client.services)
-    
+
 asyncio.run(main())
 ```
 
@@ -107,7 +108,7 @@ asyncio.run(main())
 * client.BleakClientPythonistaCB
 * scanner.BleakScannerPythonistaCB
 * `_cb` and `pythonista.cb` stubs
-* fake `cb.py` for testing with backend simulation on unsupported platforms 
+* fake `cb.py` for testing with backend simulation on unsupported platforms
 
 > [!TIP]
 > THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

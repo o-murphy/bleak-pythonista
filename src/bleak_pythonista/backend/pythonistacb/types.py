@@ -61,7 +61,9 @@ __all__ = (
 
 CB_UUID: TypeAlias = str
 DEFAULT_RSSI: int = -50  # NOTE: maybe should be -127
-DEFAULT_ATT_MTU_SIZE = 23  # NOTE: maybe should 244 for bluetooth >= 5.0
+DEFAULT_ATT_MTU_SIZE = (
+    20  # NOTE: 20 + 3 on darwin / macOS (maybe should 244 for bluetooth >= 5.0)
+)
 
 DisconnectCallback = Callable[[], None]
 
